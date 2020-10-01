@@ -1,6 +1,9 @@
 """
 This code uses the pytorch model to detect faces from live video or camera.
 """
+from vision.utils.misc import Timer
+from vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd, create_Mb_Tiny_RFB_fd_predictor
+from vision.ssd.mb_tiny_fd import create_mb_tiny_fd, create_mb_tiny_fd_predictor
 import argparse
 import sys
 import cv2
@@ -27,11 +30,9 @@ parser.add_argument('--video_path', default="/home/linzai/Videos/video/16_1.MP4"
 args = parser.parse_args()
 
 input_img_size = args.input_size
-define_img_size(input_img_size)  # must put define_img_size() before 'import create_mb_tiny_fd, create_mb_tiny_fd_predictor'
+# must put define_img_size() before 'import create_mb_tiny_fd, create_mb_tiny_fd_predictor'
+define_img_size(input_img_size)
 
-from vision.ssd.mb_tiny_fd import create_mb_tiny_fd, create_mb_tiny_fd_predictor
-from vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd, create_Mb_Tiny_RFB_fd_predictor
-from vision.utils.misc import Timer
 
 label_path = "./models/voc-model-labels.txt"
 
@@ -51,16 +52,18 @@ if net_type == 'slim':
     model_path = "models/pretrained/version-slim-320.pth"
     # model_path = "models/pretrained/version-slim-640.pth"
     net = create_mb_tiny_fd(len(class_names), is_test=True, device=test_device)
-    predictor = create_mb_tiny_fd_predictor(net, candidate_size=candidate_size, device=test_device)
+    predictor = create_mb_tiny_fd_predictor(
+        net, model_path, candidate_size=candidate_size, device=test_device, fuse=True)
 elif net_type == 'RFB':
     model_path = "models/pretrained/version-RFB-320.pth"
     # model_path = "models/pretrained/version-RFB-640.pth"
-    net = create_Mb_Tiny_RFB_fd(len(class_names), is_test=True, device=test_device)
-    predictor = create_Mb_Tiny_RFB_fd_predictor(net, candidate_size=candidate_size, device=test_device)
+    net = create_Mb_Tiny_RFB_fd(
+        len(class_names), is_test=True, device=test_device)
+    predictor = create_Mb_Tiny_RFB_fd_predictor(
+        net, model_path, candidate_size=candidate_size, device=test_device, fuse=True)
 else:
     print("The net type is wrong!")
     sys.exit(1)
-net.load(model_path)
 
 timer = Timer()
 sum = 0
@@ -71,13 +74,16 @@ while True:
         break
     image = cv2.cvtColor(orig_image, cv2.COLOR_BGR2RGB)
     timer.start()
-    boxes, labels, probs = predictor.predict(image, candidate_size / 2, threshold)
+    boxes, labels, probs = predictor.predict(
+        image, candidate_size / 2, threshold)
     interval = timer.end()
-    print('Time: {:.6f}s, Detect Objects: {:d}.'.format(interval, labels.size(0)))
+    print('Time: {:.6f}s, Detect Objects: {:d}.'.format(
+        interval, labels.size(0)))
     for i in range(boxes.size(0)):
         box = boxes[i, :]
         label = f" {probs[i]:.2f}"
-        cv2.rectangle(orig_image, (box[0], box[1]), (box[2], box[3]), (0, 255, 0), 4)
+        cv2.rectangle(orig_image, (box[0], box[1]),
+                      (box[2], box[3]), (0, 255, 0), 4)
 
         # cv2.putText(orig_image, label,
         #             (box[0], box[1] - 10),

@@ -25,12 +25,9 @@ num_classes = len(class_names)
 
 if net_type == 'slim':
     model_path = "models/train-version-slim-new/slim_new-Epoch-150-Loss-2.590208204874552.pth"
-    # model_path = "models/pretrained/version-slim-320.pth"
-    # model_path = "models/pretrained/version-slim-640.pth"
     net = create_mb_tiny_fd(len(class_names), is_test=True, device='cpu')
 elif net_type == 'RFB':
     model_path = "models/train-version-RFB/RFB-Epoch-95-Loss-2.0881652910458413.pth"
-    # model_path = "models/pretrained/version-RFB-640.pth"
     net = create_Mb_Tiny_RFB_fd(len(class_names), is_test=True, device='cpu')
 
 else:

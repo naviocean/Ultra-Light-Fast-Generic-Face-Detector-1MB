@@ -4,7 +4,6 @@ This code uses the pytorch model to detect faces from live video or camera.
 from vision.utils.misc import Timer
 from vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd, create_Mb_Tiny_RFB_fd_predictor
 from vision.ssd.mb_tiny_fd import create_mb_tiny_fd, create_mb_tiny_fd_predictor
-from vision.ssd.mb_tiny_fd_new import create_mb_tiny_fd_new, create_mb_tiny_fd_predictor_new
 import argparse
 import sys
 import cv2
@@ -16,7 +15,7 @@ import numpy as np
 parser = argparse.ArgumentParser(
     description='detect_video')
 
-parser.add_argument('--net_type', default="slim", type=str,
+parser.add_argument('--net_type', default="RFB", type=str,
                     help='The network architecture ,optional: RFB (higher precision) or slim (faster)')
 parser.add_argument('--input_size', default=320, type=int,
                     help='define network input size,default optional value 128/160/320/480/640/1280')
@@ -54,21 +53,17 @@ def load_model():
         net = create_mb_tiny_fd(
             len(class_names), is_test=True, device=test_device)
         predictor = create_mb_tiny_fd_predictor(
-            net, candidate_size=args.candidate_size, device=test_device)
+            net, model_path, candidate_size=args.candidate_size, device=test_device, fuse=True)
     elif args.net_type == 'RFB':
-        model_path = "models/train-version-RFB-640/RFB-Epoch-95-Loss-1.9533395563301288.pth"
+        model_path = "models/train-version-RFB-new/RFB-Epoch-160-Loss-2.547697603463169.pth"
         # model_path = "models/pretrained/version-RFB-640.pth"
         net = create_Mb_Tiny_RFB_fd(
             len(class_names), is_test=True, device=test_device)
         predictor = create_Mb_Tiny_RFB_fd_predictor(
-            net, candidate_size=args.candidate_size, device=test_device)
+            net, model_path, candidate_size=args.candidate_size, device=test_device, fuse=True)
     else:
         print("The net type is wrong!")
         sys.exit(1)
-
-    net.load(model_path)
-    net.eval()
-    net.fuse()
     return predictor
 
 

@@ -30,12 +30,8 @@ if __name__ == "__main__":
     num_classes = len(class_names)
 
     if net_type == 'slim':
-        model_path = "models/train-version-slim-new/slim-Epoch-0-Loss-5.180820137023926.pth"
-        # model_path = "models/pretrained/version-slim-320.pth"
         net = create_mb_tiny_fd(len(class_names), is_test=True, device='cpu')
     elif net_type == 'RFB':
-        model_path = "models/pretrained/version-RFB-320.pth"
-        # model_path = "models/pretrained/version-RFB-640.pth"
         net = create_Mb_Tiny_RFB_fd(len(class_names), is_test=True)
     else:
         print("unsupport network type.")

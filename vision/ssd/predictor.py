@@ -6,8 +6,8 @@ from ..utils.misc import Timer
 
 
 class Predictor:
-    def __init__(self, net, config, nms_method=None,
-                 iou_threshold=0.3, filter_threshold=0.01, candidate_size=200, sigma=0.5, device=None):
+    def __init__(self, net, config, model_path=None, nms_method=None,
+                 iou_threshold=0.3, filter_threshold=0.01, candidate_size=200, sigma=0.5, device=None, fuse=False):
         self.net = net
         self.transform = PredictionTransform(
             config.image_size, config.image_mean_test, config.image_std)
@@ -23,11 +23,17 @@ class Predictor:
             self.device = torch.device(
                 "cuda:0" if torch.cuda.is_available() else "cpu")
 
+        if model_path is not None:
+            self.net.load(model_path)
         self.net.to(self.device)
         self.net.eval()
+        if fuse:
+            self.net.fuse()
         self.timer = Timer()
 
-    def predict(self, image, top_k=-1, prob_threshold=None):
+    def predict(self, image, top_k=-1, prob_threshold=None, fuse=False):
+        if fuse:
+            self.net.fuse()
         cpu_device = torch.device("cpu")
         height, width, _ = image.shape
         image = self.transform(image)

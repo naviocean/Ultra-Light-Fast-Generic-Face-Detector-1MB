@@ -3,7 +3,6 @@ This code is the main training code.
 """
 from vision.ssd.ssd import MatchPrior
 from vision.ssd.mb_tiny_fd import create_mb_tiny_fd
-from vision.ssd.mb_tiny_fd_new import create_mb_tiny_fd_new
 from vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd
 from vision.ssd.data_preprocessing import TrainAugmentation, TestTransform
 from vision.ssd.config import fd_config
@@ -203,9 +202,6 @@ if __name__ == '__main__':
     logging.info(args)
     if args.net == 'slim':
         create_net = create_mb_tiny_fd
-        config = fd_config
-    elif args.net == 'slim_new':
-        create_net = create_mb_tiny_fd_new
         config = fd_config
     elif args.net == 'RFB':
         create_net = create_Mb_Tiny_RFB_fd

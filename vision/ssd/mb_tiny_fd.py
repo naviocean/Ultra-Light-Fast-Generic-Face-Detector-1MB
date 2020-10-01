@@ -64,10 +64,12 @@ def create_mb_tiny_fd(num_classes, is_test=False, device="cuda"):
                extras, classification_headers, regression_headers, is_test=is_test, config=config, device=device)
 
 
-def create_mb_tiny_fd_predictor(net, candidate_size=200, nms_method=None, sigma=0.5, device=None):
+def create_mb_tiny_fd_predictor(net, model_path=None, candidate_size=200, nms_method=None, sigma=0.5, device=None, fuse=False):
     predictor = Predictor(net, config,
+                          model_path=model_path,
                           nms_method=nms_method,
                           candidate_size=candidate_size,
                           sigma=sigma,
-                          device=device)
+                          device=device,
+                          fuse=fuse)
     return predictor

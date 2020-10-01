@@ -41,19 +41,17 @@ if args.net_type == 'slim':
     # model_path = "models/pretrained/version-slim-640.pth"
     net = create_mb_tiny_fd(len(class_names), is_test=True, device=test_device)
     predictor = create_mb_tiny_fd_predictor(
-        net, candidate_size=args.candidate_size, device=test_device)
+        net, model_path, candidate_size=args.candidate_size, device=test_device, fuse=True)
 elif args.net_type == 'RFB':
     model_path = "models/pretrained/version-RFB-320.pth"
     # model_path = "models/pretrained/version-RFB-640.pth"
     net = create_Mb_Tiny_RFB_fd(
         len(class_names), is_test=True, device=test_device)
     predictor = create_Mb_Tiny_RFB_fd_predictor(
-        net, candidate_size=args.candidate_size, device=test_device)
+        net, model_path, candidate_size=args.candidate_size, device=test_device, fuse=True)
 else:
     print("The net type is wrong!")
     sys.exit(1)
-net.load(model_path)
-net.fuse()
 
 if not os.path.exists(result_path):
     os.makedirs(result_path)
