@@ -1,5 +1,10 @@
 import torch.nn as nn
 import torch.nn.functional as F
+from .condconv import CondConv2D
+import functools
+from vision.utils.common import DWConv, Conv
+import math
+import torch
 
 
 class Mb_Tiny(nn.Module):
@@ -7,23 +12,18 @@ class Mb_Tiny(nn.Module):
     def __init__(self, num_classes=2):
         super(Mb_Tiny, self).__init__()
         self.base_channel = 8 * 2
+        # Conv2d = functools.partial(CondConv2D, num_experts=2)
+        # print('num_experts', 2)
 
         def conv_bn(inp, oup, stride):
             return nn.Sequential(
-                nn.Conv2d(inp, oup, 3, stride, 1, bias=False),
-                nn.BatchNorm2d(oup),
-                nn.ReLU(inplace=True)
+                Conv(inp, oup, k=3, s=stride, p=1),
             )
 
         def conv_dw(inp, oup, stride):
             return nn.Sequential(
-                nn.Conv2d(inp, inp, 3, stride, 1, groups=inp, bias=False),
-                nn.BatchNorm2d(inp),
-                nn.ReLU(inplace=True),
-
-                nn.Conv2d(inp, oup, 1, 1, 0, bias=False),
-                nn.BatchNorm2d(oup),
-                nn.ReLU(inplace=True),
+                Conv(inp, inp, k=3, s=stride, p=1, g=inp),
+                Conv(inp, oup, k=1, s=1, p=0, g=1),
             )
 
         self.model = nn.Sequential(
@@ -39,7 +39,7 @@ class Mb_Tiny(nn.Module):
             conv_dw(self.base_channel * 8, self.base_channel * 8, 1),
             conv_dw(self.base_channel * 8, self.base_channel * 8, 1),
             conv_dw(self.base_channel * 8, self.base_channel * 16, 2),  # 10*8
-            conv_dw(self.base_channel * 16, self.base_channel * 16, 1)
+            conv_dw(self.base_channel * 16, self.base_channel * 16, 1),
         )
         self.fc = nn.Linear(1024, num_classes)
 

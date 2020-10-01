@@ -23,14 +23,14 @@ sys.path.append('../../')
 
 parser = argparse.ArgumentParser(description='run ultraface with MNN in py')
 parser.add_argument(
-    '--model_path', default="../model/version-RFB/RFB-320.mnn", type=str, help='model path')
+    '--model_path', default="./models/onnx/slim-320.mnn", type=str, help='model path')
 parser.add_argument('--input_size', default="320,240", type=str,
                     help='define network input size,format: width,height')
 parser.add_argument('--threshold', default=0.7,
                     type=float, help='score threshold')
-parser.add_argument('--imgs_path', default="../imgs",
+parser.add_argument('--imgs_path', default="./imgs",
                     type=str, help='imgs dir')
-parser.add_argument('--results_path', default="results",
+parser.add_argument('--results_path', default="./results",
                     type=str, help='results dir')
 args = parser.parse_args()
 
@@ -113,6 +113,18 @@ def predict(width, height, confidences, boxes, prob_threshold, iou_threshold=0.3
     return picked_box_probs[:, :4].astype(np.int32), np.array(picked_labels), picked_box_probs[:, 4]
 
 
+def getOutputData(output_tensor):
+    output_shape = output_tensor.getShape()
+    assert output_tensor.getDataType() == MNN.Halide_Type_Float
+    tmp_output = MNN.Tensor(output_shape, output_tensor.getDataType(),
+                            np.zeros(output_shape, dtype=float), output_tensor.getDimensionType())
+    output_tensor.copyToHostTensor(tmp_output)
+    output_data = np.array(tmp_output.getData(),
+                           dtype=float).reshape(output_shape)
+
+    return output_data
+
+
 def inference():
     input_size = [int(v.strip()) for v in args.input_size.split(",")]
     priors = define_img_size(input_size)
@@ -137,14 +149,16 @@ def inference():
         input_tensor.copyFrom(tmp_input)
         time_time = time.time()
         interpreter.runSession(session)
-        scores = interpreter.getSessionOutput(session, "scores").getData()
-        boxes = interpreter.getSessionOutput(session, "boxes").getData()
-        boxes = np.expand_dims(np.reshape(boxes, (-1, 4)), axis=0)
-        scores = np.expand_dims(np.reshape(scores, (-1, 2)), axis=0)
+        scores_tensor = interpreter.getSessionOutput(session, "scores")
+        locations_tensor = interpreter.getSessionOutput(session, "boxes")
+        scores = getOutputData(scores_tensor)
+        locations = getOutputData(locations_tensor)
         print("inference time: {} s".format(round(time.time() - time_time, 4)))
         boxes = box_utils.convert_locations_to_boxes(
-            boxes, priors, center_variance, size_variance)
+            locations, priors, center_variance, size_variance)
+
         boxes = box_utils.center_form_to_corner_form(boxes)
+
         boxes, labels, probs = predict(
             image_ori.shape[1], image_ori.shape[0], scores, boxes, args.threshold)
         for i in range(boxes.shape[0]):

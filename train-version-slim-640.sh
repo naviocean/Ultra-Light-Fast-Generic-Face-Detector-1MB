@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-model_root_path="./models/train-version-slim"
+model_root_path="./models/train-version-slim-640"
 log_dir="$model_root_path/logs"
 log="$log_dir/log"
 mkdir -p "$log_dir"
@@ -14,17 +14,17 @@ python3 -u train.py \
   --num_epochs \
   200 \
   --milestones \
-  "95,150" \
+  "80,110,150" \
   --lr \
   1e-2 \
   --batch_size \
   64 \
   --input_size \
-  320 \
+  640 \
   --checkpoint_folder \
   ${model_root_path} \
   --num_workers \
-  4 \
+  8 \
   --log_dir \
   ${log_dir} \
   --cuda_index \

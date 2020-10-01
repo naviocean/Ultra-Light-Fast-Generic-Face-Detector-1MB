@@ -1,6 +1,12 @@
 """
 This code is the main training code.
 """
+from vision.ssd.ssd import MatchPrior
+from vision.ssd.mb_tiny_fd import create_mb_tiny_fd
+from vision.ssd.mb_tiny_fd_new import create_mb_tiny_fd_new
+from vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd
+from vision.ssd.data_preprocessing import TrainAugmentation, TestTransform
+from vision.ssd.config import fd_config
 import argparse
 import itertools
 import logging
@@ -29,7 +35,7 @@ parser.add_argument('--balance_data', action='store_true',
                     help="Balance training data by down-sampling more frequent labels.")
 
 parser.add_argument('--net', default="RFB",
-                    help="The network architecture ,optional(RFB , slim)")
+                    help="The network architecture ,optional(RFB , slim, slim_new)")
 parser.add_argument('--freeze_base_net', action='store_true',
                     help="Freeze base net layers.")
 parser.add_argument('--freeze_net', action='store_true',
@@ -101,17 +107,15 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 args = parser.parse_args()
 
-input_img_size = args.input_size  # define input size ,default optional(128/160/320/480/640/1280)
+# define input size ,default optional(128/160/320/480/640/1280)
+input_img_size = args.input_size
 logging.info("inpu size :{}".format(input_img_size))
-define_img_size(input_img_size)  # must put define_img_size() before 'import fd_config'
+# must put define_img_size() before 'import fd_config'
+define_img_size(input_img_size)
 
-from vision.ssd.config import fd_config
-from vision.ssd.data_preprocessing import TrainAugmentation, TestTransform
-from vision.ssd.mb_tiny_RFB_fd import create_Mb_Tiny_RFB_fd
-from vision.ssd.mb_tiny_fd import create_mb_tiny_fd
-from vision.ssd.ssd import MatchPrior
 
-DEVICE = torch.device("cuda:0" if torch.cuda.is_available() and args.use_cuda else "cpu")
+DEVICE = torch.device("cuda:0" if torch.cuda.is_available()
+                      and args.use_cuda else "cpu")
 
 if args.use_cuda and torch.cuda.is_available():
     torch.backends.cudnn.benchmark = True
@@ -142,7 +146,8 @@ def train(loader, net, criterion, optimizer, device, debug_steps=100, epoch=-1):
 
         optimizer.zero_grad()
         confidence, locations = net(images)
-        regression_loss, classification_loss = criterion(confidence, locations, labels, boxes)  # TODO CHANGE BOXES
+        regression_loss, classification_loss = criterion(
+            confidence, locations, labels, boxes)  # TODO CHANGE BOXES
         loss = regression_loss + classification_loss
         loss.backward()
         optimizer.step()
@@ -182,7 +187,8 @@ def test(loader, net, criterion, device):
 
         with torch.no_grad():
             confidence, locations = net(images)
-            regression_loss, classification_loss = criterion(confidence, locations, labels, boxes)
+            regression_loss, classification_loss = criterion(
+                confidence, locations, labels, boxes)
             loss = regression_loss + classification_loss
 
         running_loss += loss.item()
@@ -198,6 +204,9 @@ if __name__ == '__main__':
     if args.net == 'slim':
         create_net = create_mb_tiny_fd
         config = fd_config
+    elif args.net == 'slim_new':
+        create_net = create_mb_tiny_fd_new
+        config = fd_config
     elif args.net == 'RFB':
         create_net = create_Mb_Tiny_RFB_fd
         config = fd_config
@@ -206,11 +215,13 @@ if __name__ == '__main__':
         parser.print_help(sys.stderr)
         sys.exit(1)
 
-    train_transform = TrainAugmentation(config.image_size, config.image_mean, config.image_std)
+    train_transform = TrainAugmentation(
+        config.image_size, config.image_mean, config.image_std)
     target_transform = MatchPrior(config.priors, config.center_variance,
                                   config.size_variance, args.overlap_threshold)
 
-    test_transform = TestTransform(config.image_size, config.image_mean_test, config.image_std)
+    test_transform = TestTransform(
+        config.image_size, config.image_mean_test, config.image_std)
 
     if not os.path.exists(args.checkpoint_folder):
         os.makedirs(args.checkpoint_folder)
@@ -220,12 +231,14 @@ if __name__ == '__main__':
         if args.dataset_type == 'voc':
             dataset = VOCDataset(dataset_path, transform=train_transform,
                                  target_transform=target_transform)
-            label_file = os.path.join(args.checkpoint_folder, "voc-model-labels.txt")
+            label_file = os.path.join(
+                args.checkpoint_folder, "voc-model-labels.txt")
             store_labels(label_file, dataset.class_names)
             num_classes = len(dataset.class_names)
 
         else:
-            raise ValueError(f"Dataset tpye {args.dataset_type} is not supported.")
+            raise ValueError(
+                f"Dataset tpye {args.dataset_type} is not supported.")
         datasets.append(dataset)
     logging.info(f"Stored labels into file {label_file}.")
     train_dataset = ConcatDataset(datasets)
@@ -275,7 +288,8 @@ if __name__ == '__main__':
         freeze_net_layers(net.base_net)
         freeze_net_layers(net.source_layer_add_ons)
         freeze_net_layers(net.extras)
-        params = itertools.chain(net.regression_headers.parameters(), net.classification_headers.parameters())
+        params = itertools.chain(
+            net.regression_headers.parameters(), net.classification_headers.parameters())
         logging.info("Freeze all the layers except prediction heads.")
     else:
         params = [
@@ -300,7 +314,8 @@ if __name__ == '__main__':
     elif args.pretrained_ssd:
         logging.info(f"Init from pretrained ssd {args.pretrained_ssd}")
         net.init_from_pretrained_ssd(args.pretrained_ssd)
-    logging.info(f'Took {timer.end("Load Model"):.2f} seconds to load the model.')
+    logging.info(
+        f'Took {timer.end("Load Model"):.2f} seconds to load the model.')
 
     net.to(DEVICE)
 
@@ -326,7 +341,8 @@ if __name__ == '__main__':
                                     gamma=0.1, last_epoch=last_epoch)
         elif args.scheduler == 'cosine':
             logging.info("Uses CosineAnnealingLR scheduler.")
-            scheduler = CosineAnnealingLR(optimizer, args.t_max, last_epoch=last_epoch)
+            scheduler = CosineAnnealingLR(
+                optimizer, args.t_max, last_epoch=last_epoch)
         elif args.scheduler == 'poly':
             logging.info("Uses PolyLR scheduler.")
         else:
@@ -348,13 +364,15 @@ if __name__ == '__main__':
 
         if epoch % args.validation_epochs == 0 or epoch == args.num_epochs - 1:
             logging.info("lr rate :{}".format(optimizer.param_groups[0]['lr']))
-            val_loss, val_regression_loss, val_classification_loss = test(val_loader, net, criterion, DEVICE)
+            val_loss, val_regression_loss, val_classification_loss = test(
+                val_loader, net, criterion, DEVICE)
             logging.info(
                 f"Epoch: {epoch}, " +
                 f"Validation Loss: {val_loss:.4f}, " +
                 f"Validation Regression Loss {val_regression_loss:.4f}, " +
                 f"Validation Classification Loss: {val_classification_loss:.4f}"
             )
-            model_path = os.path.join(args.checkpoint_folder, f"{args.net}-Epoch-{epoch}-Loss-{val_loss}.pth")
+            model_path = os.path.join(
+                args.checkpoint_folder, f"{args.net}-Epoch-{epoch}-Loss-{val_loss}.pth")
             net.module.save(model_path)
             logging.info(f"Saved model {model_path}")

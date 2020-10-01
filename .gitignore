@@ -12,3 +12,12 @@ widerface_evaluation
 widerface_evaluate/build
 widerface_evaluate/*.so
 widerface_evaluate/*.c
+models/onnx/
+models/train-version-*
+imgs/
+detect_imgs_results*
+*.mp4
+*.avi
+.DS_Store
+.vscode
+*.pyc
